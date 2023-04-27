@@ -1,0 +1,56 @@
+{
+	"name": "GoogleSEO_DataFlow_EA",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "GoogleSEO"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "GoogleSEO.json",
+				"container": "googleseo"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"rows": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"keys": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"clicks": {
+								"type": "integer"
+							},
+							"impressions": {
+								"type": "integer"
+							},
+							"ctr": {
+								"type": "number"
+							},
+							"position": {
+								"type": "integer"
+							}
+						}
+					}
+				},
+				"responseAggregationType": {
+					"type": "string"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,31 @@
+{
+	"name": "Youtube_Analytics_REST_API",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Youtube_REST_API_Connection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"startDate": {
+				"type": "string",
+				"defaultValue": "2023-02-05"
+			},
+			"endTime": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "YouTube"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "v2/reports?ids=channel==MINE&startDate=@{dataset().startDate}&endDate=@{dataset().endTime}&dimensions=day&metrics=views,comments,likes,dislikes,estimatedMinutesWatched,averageViewDuration",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

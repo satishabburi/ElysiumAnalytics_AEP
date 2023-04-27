@@ -1,0 +1,104 @@
+{
+	"name": "Youtube_Analytics_DATAFEED",
+	"properties": {
+		"folder": {
+			"name": "YouTube"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Youtube_Dataflow_AzureBlob_EA",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SF_YOUTUBE_CHANNEL_REPORTS_DAILY_METRICS",
+						"type": "DatasetReference"
+					},
+					"name": "sink1",
+					"rejectedDataLinkedService": {
+						"referenceName": "googlea",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "split1"
+				},
+				{
+					"name": "flatten1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          columnHeaders as (columnType as string, dataType as string, name as string)[],",
+				"          kind as string,",
+				"          rows as string[][]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'documentPerLine') ~> source1",
+				"source1 split(greater(size(rows), 1),",
+				"     disjoint: false) ~> split1@(Succes, Failed)",
+				"split1@Succes foldDown(unroll(rows),",
+				"     mapColumn(",
+				"          rowsData = rows",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> flatten1",
+				"flatten1 derive(v1 = rowsData[1],",
+				"          v2 = rowsData[2],",
+				"          v3 = rowsData[3],",
+				"          v4 = rowsData[4],",
+				"          v5 = rowsData[5],",
+				"          v6 = rowsData[6],",
+				"          v7 = rowsData[7],",
+				"          updateTimeStamp = currentTimestamp(),",
+				"          loadTimeStamp = currentTimestamp()) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DAY as date,",
+				"          VIEWS as decimal(38,0),",
+				"          COMMENTS as decimal(38,0),",
+				"          LIKES as decimal(38,0),",
+				"          DISLIKES as decimal(38,0),",
+				"          ESTIMATEDMINUTESWATCHED as decimal(38,0),",
+				"          AVERAGEVIEWDURATION as decimal(38,0),",
+				"          LOAD_TS as timestamp,",
+				"          UPDATE_TS as timestamp",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DAY = v1,",
+				"          VIEWS = v2,",
+				"          COMMENTS = v3,",
+				"          LIKES = v4,",
+				"          DISLIKES = v5,",
+				"          ESTIMATEDMINUTESWATCHED = v6,",
+				"          AVERAGEVIEWDURATION = v7,",
+				"          LOAD_TS = loadTimeStamp,",
+				"          UPDATE_TS = updateTimeStamp",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

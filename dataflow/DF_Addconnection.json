@@ -1,0 +1,116 @@
+{
+	"name": "DF_Addconnection",
+	"properties": {
+		"folder": {
+			"name": "ConnectionMgnt"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SF_DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SF_DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "parse2"
+				},
+				{
+					"name": "derivedColumn4"
+				},
+				{
+					"name": "derivedColumn5"
+				},
+				{
+					"name": "alterRow"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     dataSourceId as string,",
+				"     refreshToken as string",
+				"}",
+				"source(output(",
+				"          DATASOURCE_ID as string,",
+				"          DATASOURCE_NAME as string,",
+				"          CONNECTION_CONFIG as string,",
+				"          ORGANIZATION_ID as string,",
+				"          STATUS as string,",
+				"          EXECUTION_DATE as timestamp,",
+				"          STATUS_LOG as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     query: (\"SELECT * FROM AZURE.PUBLIC.DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG where DATASOURCE_ID='{$dataSourceId}'\"),",
+				"     format: 'query') ~> source1",
+				"split1@WebAlalytics derive(decodeConnectionData = fromBase64(CONNECTION_CONFIG)) ~> derivedColumn2",
+				"derivedColumn2 parse(parseToJsonData = decodeConnectionData ? (Connection_Config as (access_token as string,",
+				"     expires_in as integer,",
+				"     refresh_token as string,",
+				"     scope as string,",
+				"     token_type as string,",
+				"     clientID as string,",
+				"     clientSecret as string),",
+				"     Cust_Profile as (organizationID as string,",
+				"     boomiTenantId as string))[],",
+				"     format: 'json',",
+				"     documentForm: 'documentPerLine') ~> parse2",
+				"parse2 derive(reFormConnectionConf = concat('{\"Connection_Config\" :{\"access_token\":\"',parseToJsonData[1].Connection_Config.access_token,'\",\"expires_in\":3599,\"refresh_token\":\"',$refreshToken,'\",\"scope\":\"',parseToJsonData[1].Connection_Config.scope,'\",\"token_type\":\"',parseToJsonData[1].Connection_Config.token_type,'\",\"clientID\":\"',parseToJsonData[1].Connection_Config.clientID,'\",\"clientSecret\":\"',parseToJsonData[1].Connection_Config.clientSecret,'\"},\"Cust_Profile\":{\"organizationID\":\"',parseToJsonData[1].Cust_Profile.organizationID,'\",\"boomiTenantId\":\"',parseToJsonData[1].Cust_Profile.boomiTenantId,'\"}}')) ~> derivedColumn4",
+				"derivedColumn4 derive(encodeConnectionData = toBase64(reFormConnectionConf),",
+				"          executedTime = currentTimestamp(),",
+				"          status = 'Connected') ~> derivedColumn5",
+				"derivedColumn5 alterRow(updateIf(true())) ~> alterRow",
+				"source1 split(or(equals(DATASOURCE_ID, 'YouTube'), or(equals(DATASOURCE_ID, 'GoogleAnalytics'), equals(DATASOURCE_ID, 'GoogleSEO'))),",
+				"     disjoint: false) ~> split1@(WebAlalytics, Other)",
+				"alterRow sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DATASOURCE_ID as string,",
+				"          DATASOURCE_NAME as string,",
+				"          CONNECTION_CONFIG as string,",
+				"          ORGANIZATION_ID as string,",
+				"          STATUS as string,",
+				"          EXECUTION_DATE as timestamp,",
+				"          STATUS_LOG as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['DATASOURCE_ID'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DATASOURCE_ID,",
+				"          DATASOURCE_NAME,",
+				"          CONNECTION_CONFIG = encodeConnectionData,",
+				"          ORGANIZATION_ID,",
+				"          STATUS = derivedColumn5@status,",
+				"          EXECUTION_DATE = executedTime,",
+				"          STATUS_LOG",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

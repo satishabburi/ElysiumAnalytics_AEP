@@ -1,0 +1,49 @@
+{
+	"name": "GSEO RefreshToken to AccessToken Generation Process",
+	"properties": {
+		"activities": [
+			{
+				"name": "Data flow1",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "DF_Updating_ConnectionConfig_Details",
+						"type": "DataFlowReference",
+						"parameters": {
+							"dataSourceId": {
+								"value": "'@{pipeline().parameters.dataSource}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"dataSource": {
+				"type": "string",
+				"defaultValue": "GoogleSEO"
+			}
+		},
+		"folder": {
+			"name": "GoogleAnalytics"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-06T22:44:05Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

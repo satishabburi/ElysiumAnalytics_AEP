@@ -1,0 +1,45 @@
+{
+	"name": "Twitter_Pipeline_AB",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "employee.json",
+				"container": "googleseo"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"DATASOURCE_ID": {
+					"type": "string"
+				},
+				"DATASOURCE_NAME": {
+					"type": "string"
+				},
+				"ORGANIZATION_ID": {
+					"type": "string"
+				},
+				"STATUS": {
+					"type": "string"
+				},
+				"STATUS_LOG": {
+					"type": "string"
+				},
+				"EXECUTION_DATE": {
+					"type": "string"
+				},
+				"CONNECTION_CONFIG": {
+					"type": "string"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,193 @@
+{
+	"name": "GA_Dataflow_AzureBlob_EA",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "GoogleAnalytics"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "GoogleAnalytics.json",
+				"container": "googleseo"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"kind": {
+					"type": "string"
+				},
+				"id": {
+					"type": "string"
+				},
+				"query": {
+					"type": "object",
+					"properties": {
+						"start-date": {
+							"type": "string"
+						},
+						"end-date": {
+							"type": "string"
+						},
+						"ids": {
+							"type": "string"
+						},
+						"dimensions": {
+							"type": "string"
+						},
+						"metrics": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						},
+						"start-index": {
+							"type": "integer"
+						},
+						"max-results": {
+							"type": "integer"
+						}
+					}
+				},
+				"itemsPerPage": {
+					"type": "integer"
+				},
+				"totalResults": {
+					"type": "integer"
+				},
+				"selfLink": {
+					"type": "string"
+				},
+				"previousLink": {
+					"type": "string"
+				},
+				"profileInfo": {
+					"type": "object",
+					"properties": {
+						"profileId": {
+							"type": "string"
+						},
+						"accountId": {
+							"type": "string"
+						},
+						"webPropertyId": {
+							"type": "string"
+						},
+						"internalWebPropertyId": {
+							"type": "string"
+						},
+						"profileName": {
+							"type": "string"
+						},
+						"tableId": {
+							"type": "string"
+						}
+					}
+				},
+				"containsSampledData": {
+					"type": "boolean"
+				},
+				"columnHeaders": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string"
+							},
+							"columnType": {
+								"type": "string"
+							},
+							"dataType": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"totalsForAllResults": {
+					"type": "object",
+					"properties": {
+						"ga:users": {
+							"type": "string"
+						},
+						"ga:newUsers": {
+							"type": "string"
+						},
+						"ga:sessions": {
+							"type": "string"
+						},
+						"ga:sessionsPerUser": {
+							"type": "string"
+						},
+						"ga:sessionDuration": {
+							"type": "string"
+						},
+						"ga:bounces": {
+							"type": "string"
+						},
+						"ga:pageviews": {
+							"type": "string"
+						},
+						"ga:pageviewsPerSession": {
+							"type": "string"
+						},
+						"ga:avgSessionDuration": {
+							"type": "string"
+						},
+						"ga:bounceRate": {
+							"type": "string"
+						}
+					}
+				},
+				"dataTable": {
+					"type": "object",
+					"properties": {
+						"cols": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string"
+									},
+									"label": {
+										"type": "string"
+									},
+									"type": {
+										"type": "string"
+									}
+								}
+							}
+						},
+						"rows": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"c": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"v": {
+													"type": "string"
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,187 @@
+{
+	"name": "SproutSocial_Metrics",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "SproutSocial"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@concat('SS', utcnow(), '.json')",
+					"type": "Expression"
+				},
+				"container": "googleseo"
+			},
+			"encodingName": "UTF-8 without BOM"
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"data": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"content_category": {
+								"type": "string"
+							},
+							"post_category": {
+								"type": "string"
+							},
+							"post_type": {
+								"type": "string"
+							},
+							"customer_profile_id": {
+								"type": "string"
+							},
+							"profile_guid": {
+								"type": "string"
+							},
+							"guid": {
+								"type": "string"
+							},
+							"text": {
+								"type": "string"
+							},
+							"perma_link": {
+								"type": "string"
+							},
+							"network": {
+								"type": "string"
+							},
+							"visual_media": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"media_url": {
+											"type": "string"
+										},
+										"thumbnail_url": {
+											"type": "string"
+										},
+										"media_type": {
+											"type": "string"
+										}
+									}
+								}
+							},
+							"clickthrough_link": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"long": {
+										"type": "string"
+									}
+								}
+							},
+							"internal": {
+								"type": "object",
+								"properties": {
+									"tags": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "integer"
+												}
+											}
+										}
+									},
+									"sent_by": {
+										"type": "object",
+										"properties": {
+											"id": {
+												"type": "integer"
+											},
+											"email": {
+												"type": "string"
+											},
+											"first_name": {
+												"type": "string"
+											},
+											"last_name": {
+												"type": "string"
+											}
+										}
+									}
+								}
+							},
+							"metrics": {
+								"type": "object",
+								"properties": {
+									"lifetime.likes": {
+										"type": "integer"
+									},
+									"lifetime.comments_count": {
+										"type": "integer"
+									},
+									"lifetime.impressions": {
+										"type": "integer"
+									},
+									"lifetime.impressions_organic": {
+										"type": "integer"
+									},
+									"lifetime.post_content_clicks": {
+										"type": "integer"
+									},
+									"lifetime.post_link_clicks": {
+										"type": "integer"
+									},
+									"lifetime.shares_count": {
+										"type": "integer"
+									},
+									"lifetime.reactions": {
+										"type": "integer"
+									}
+								}
+							},
+							"sent": {
+								"type": "boolean"
+							},
+							"from": {
+								"type": "object",
+								"properties": {
+									"guid": {
+										"type": "string"
+									},
+									"name": {
+										"type": "string"
+									},
+									"profile_picture": {
+										"type": "string"
+									}
+								}
+							},
+							"created_time": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"paging": {
+					"type": "object",
+					"properties": {
+						"current_page": {
+							"type": "integer"
+						},
+						"total_pages": {
+							"type": "integer"
+						}
+					}
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

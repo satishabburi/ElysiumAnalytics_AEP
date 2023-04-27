@@ -1,0 +1,24 @@
+{
+	"name": "Vimeo_Pipeline_AB",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Vimeo"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "Vimeo.json",
+				"container": "googleseo"
+			},
+			"encodingName": "UTF-8 without BOM"
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

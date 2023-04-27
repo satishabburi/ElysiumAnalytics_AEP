@@ -1,0 +1,13 @@
+{
+	"name": "Twitter_Rest_API_Connection",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://api.twitter.com/2/users/by/username/SystemSoft_Tech",
+			"enableServerCertificateValidation": false,
+			"authenticationType": "Anonymous"
+		}
+	}
+}

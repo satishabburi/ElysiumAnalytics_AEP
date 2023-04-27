@@ -1,0 +1,196 @@
+{
+	"name": "GSEO RefreshToken",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Pipeline1",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Get ConnectionConfig By DataSource",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"dataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Execute Pipeline1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Execute Pipeline1').output.pipelineReturnValue.status, 'Connected')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set status",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "status",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('Execute Pipeline1').output.pipelineReturnValue.status"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set customProfile",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "customProfile",
+								"value": {
+									"value": "@{activity('Execute Pipeline1').output.pipelineReturnValue.connectionData.Cust_Profile}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Web1",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set statusDS",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "https://accounts.google.com/o/oauth2/token?grant_type=refresh_token&refresh_token=@{activity('Execute Pipeline1').output.pipelineReturnValue.connectionData.Connection_Config.refresh_token}&client_id=@{activity('Execute Pipeline1').output.pipelineReturnValue.connectionData.Connection_Config.clientID}&client_secret=@{activity('Execute Pipeline1').output.pipelineReturnValue.connectionData.Connection_Config.clientSecret}",
+									"type": "Expression"
+								},
+								"method": "POST"
+							}
+						},
+						{
+							"name": "Set AccessToken",
+							"description": "1",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Web1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "AccessToken",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('Web1').output.access_token"
+										}
+									},
+									{
+										"key": "tokenType",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('Web1').output.token_type"
+										}
+									},
+									{
+										"key": "custProfile",
+										"value": {
+											"type": "Expression",
+											"content": "@variables('customProfile')"
+										}
+									},
+									{
+										"key": "status",
+										"value": {
+											"type": "Expression",
+											"content": "@variables('datasourceStatus')"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						},
+						{
+							"name": "Set statusDS",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set customProfile",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasourceStatus",
+								"value": {
+									"value": "@{activity('Execute Pipeline1').output.pipelineReturnValue.status}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"dataSource": {
+				"type": "string",
+				"defaultValue": "GoogleAnalytics"
+			}
+		},
+		"variables": {
+			"customProfile": {
+				"type": "String"
+			},
+			"datasourceStatus": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Practitioners_Workspace"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-06T21:39:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

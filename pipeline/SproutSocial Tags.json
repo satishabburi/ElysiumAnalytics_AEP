@@ -1,0 +1,600 @@
+{
+	"name": "SproutSocial Tags",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Errorhand",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Calling DF-Error",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Global Alert Notification Framework",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"parentPipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"errorMessage": {
+							"value": "@string(replace(activity('Fetching data from SPROUT Rest API and save into AB').error.message, '\"',''''))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set payloadSize",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fetching data from SPROUT Rest API and save into AB",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PayloadSize1",
+					"value": {
+						"value": "@string(activity('Fetching data from SPROUT Rest API and save into AB').output.dataWritten)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set docCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set payloadSize",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DocumentCount1",
+					"value": {
+						"value": "@string(activity('Fetching data from SPROUT Rest API and save into AB').output.rowsCopied)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute DataFeed",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "SocialMedia",
+						"SubFunction": "Tags",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Inprogress",
+						"documentCount": 0
+					}
+				}
+			},
+			{
+				"name": "Calling DF-Error",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Fetching data from SPROUT Rest API and save into AB",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "SocialMedia",
+						"SubFunction": "Tags",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"payloadSize": 0,
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Error",
+						"documentCount": 1,
+						"iobExecutionLog": "Not able to fetch the data from GA Rest API"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set docCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(greater(int(variables('DocumentCount1')), 0), greater(int(variables('PayloadSize1')), 38) )",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Calling DF-NoData",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Tags",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": 0,
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "NoData",
+									"documentCount": 1
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Calling DF-Inprogress",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Tags",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Inprogress",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Calling DF-SF-Error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Injecting data into blob",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Tags",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@variables('PayloadSize1')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Error",
+									"documentCount": {
+										"value": "@variables('DocumentCount1')",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Not able to Ingested data to EA SNOWFLAKE"
+								}
+							}
+						},
+						{
+							"name": "Execute DataFeed_Success",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Injecting data into blob",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Tags",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Success",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Data is Ingested to EA SNOWFLAKE Successfully ​"
+								}
+							}
+						},
+						{
+							"name": "Execute ErrorHandling for SF error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-SF-Error",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Injecting data into blob').error.message, '\"',''''))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Injecting data into blob",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-Inprogress",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "SproutSocial_Tags_DATAFEED",
+									"type": "DataFlowReference",
+									"parameters": {
+										"feedId": {
+											"value": "'@{pipeline().RunId}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Fetching data from SPROUT Rest API and save into AB",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Delete1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"additionalHeaders": {
+							"Authorization": {
+								"value": "@concat(pipeline().parameters.tokenType,' ', pipeline().parameters.accessToken)",
+								"type": "Expression"
+							}
+						},
+						"paginationRules": {
+							"supportRFC5988": "true"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings",
+							"filePattern": "setOfObjects"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "googlea",
+							"type": "LinkedServiceReference"
+						}
+					},
+					"enableSkipIncompatibleRow": false
+				},
+				"inputs": [
+					{
+						"referenceName": "REST_SproutSocial_Tags",
+						"type": "DatasetReference",
+						"parameters": {
+							"organizationId": {
+								"value": "@pipeline().parameters.orgId",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SproutSocial_Tags_Pipeline_AzureBlob",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Delete1",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Execute DataFeed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "SproutSocial_Tags_Pipeline_AzureBlob",
+						"type": "DatasetReference"
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "googlea",
+							"type": "LinkedServiceReference"
+						}
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"recursive": true,
+						"wildcardFileName": "Sprout*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"parameters": {
+			"loadTs": {
+				"type": "string"
+			},
+			"dataSource": {
+				"type": "string"
+			},
+			"currentTime": {
+				"type": "string"
+			},
+			"runId": {
+				"type": "string"
+			},
+			"accessToken": {
+				"type": "string"
+			},
+			"tokenType": {
+				"type": "string"
+			},
+			"orgId": {
+				"type": "string"
+			},
+			"customerProfileIds": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"PayloadSize1": {
+				"type": "String"
+			},
+			"DocumentCount1": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "SproutSocial"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-20T19:38:30Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

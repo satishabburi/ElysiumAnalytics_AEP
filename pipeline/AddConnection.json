@@ -1,0 +1,231 @@
+{
+	"name": "AddConnection",
+	"properties": {
+		"activities": [
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "fetching data from SF",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@lessOrEquals(activity('fetching data from SF').output.resultSetCount, 0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set refreshToken",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "refreshToken",
+								"value": {
+									"value": "@json(string(pipeline().parameters.Connection_Config)).Connection_Config.refresh_token",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "UpdationConnectionDetails",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "Set refreshToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "DF_Addconnection",
+									"type": "DataFlowReference",
+									"parameters": {
+										"dataSourceId": {
+											"value": "'@{pipeline().parameters.dataSource}'",
+											"type": "Expression"
+										},
+										"refreshToken": {
+											"value": "'@{variables('refreshToken')}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Injecting the data into SF",
+							"type": "Script",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "Dynamic Tenant Snowflake Connection",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"parameters": [
+											{
+												"name": "DATASOURCE_ID",
+												"type": "String",
+												"value": {
+													"value": "@pipeline().parameters.dataSource",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "DATASOURCE_NAME",
+												"type": "String",
+												"value": {
+													"value": "@pipeline().parameters.dataSource",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "CONNECTION_CONFIG",
+												"type": "String",
+												"value": {
+													"value": "@base64(pipeline().parameters.Connection_Config)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "ORGANIZATION_ID",
+												"type": "String",
+												"value": {
+													"value": "@pipeline().parameters.Organization_ID",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "STATUS",
+												"type": "String",
+												"value": "Connected",
+												"direction": "Input"
+											},
+											{
+												"name": "EXECUTION_DATE",
+												"type": "String",
+												"value": {
+													"value": "@utcNow()",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "STATUS_LOG",
+												"type": "String",
+												"value": {
+													"value": "@concat('ConnectionAPI,',pipeline().RunId,',N.A,',utcnow())",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											}
+										],
+										"type": "NonQuery",
+										"text": "Insert into \"AZURE\".\"PUBLIC\".\"DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG\" (DATASOURCE_ID, DATASOURCE_NAME, CONNECTION_CONFIG, ORGANIZATION_ID, STATUS, EXECUTION_DATE, STATUS_LOG) \nvalues (?,?,?,?,?,?,?)"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "fetching data from SF",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Dynamic Tenant Snowflake Connection",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "DATASOURCE_ID",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": "SELECT * FROM \"AZURE\".\"PUBLIC\".\"DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG\" where DATASOURCE_ID = ?"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"Connection_Config": {
+				"type": "string"
+			},
+			"dataSource": {
+				"type": "string"
+			},
+			"Organization_ID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"refreshToken": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Connection Mgnt"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-12T14:42:52Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

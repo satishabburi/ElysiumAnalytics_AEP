@@ -1,0 +1,13 @@
+{
+	"name": "Twitter_Public_PrivateMetrics_EA",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Twitter_Rest_API_Connection",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

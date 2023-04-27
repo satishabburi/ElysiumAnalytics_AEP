@@ -1,0 +1,39 @@
+{
+	"name": "SF_TRIGGER_RW_GA_LOADS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Dynamic Tenant Snowflake Connection",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "GoogleAnalytics"
+		},
+		"annotations": [],
+		"type": "SnowflakeTable",
+		"schema": [
+			{
+				"name": "LOAD_TS",
+				"type": "TIMESTAMP_NTZ",
+				"precision": 29,
+				"scale": 9
+			},
+			{
+				"name": "FEED_JOB_ID",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "RANGE",
+				"type": "NUMBER",
+				"precision": 38,
+				"scale": 0
+			}
+		],
+		"typeProperties": {
+			"schema": "PUBLIC",
+			"table": "TRIGGER_YOUTUBE_LOADS"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

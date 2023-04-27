@@ -1,0 +1,39 @@
+{
+	"name": "REST_GA_PageStats_EA",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "GA_Rest_API_Connection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"startDate": {
+				"type": "string",
+				"defaultValue": "2021-02-01"
+			},
+			"endDate": {
+				"type": "string",
+				"defaultValue": "2021-02-12"
+			},
+			"max": {
+				"type": "string",
+				"defaultValue": "200"
+			},
+			"orgId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "GoogleAnalytics"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "analytics/v3/data/ga?ids=ga:@{dataset().orgId}&dimensions=ga:date,ga:channelGrouping,ga:deviceCategory&metrics=ga:users,ga:newUsers,ga:sessions,ga:sessionsPerUser,ga:sessionDuration,ga:bounces,ga:pageviews,ga:pageviewsPerSession,ga:avgSessionDuration,ga:bounceRate&output=dataTable&start-date=@{dataset().startDate}&end-date=@{dataset().endDate}&max-results=@{dataset().max}&start-index={offset}",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

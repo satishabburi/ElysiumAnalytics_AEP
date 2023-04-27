@@ -1,0 +1,547 @@
+{
+	"name": "GoogleSEO_Reports",
+	"properties": {
+		"activities": [
+			{
+				"name": "Fetching Data from GSEO",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Execute DataFeed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "POST",
+						"requestBody": {
+							"value": "{\n    \"startDate\": \"@{pipeline().parameters.loadTs}\",\n    \"endDate\": \"@{utcnow('yyyy-MM-dd')}\",\n    \"dimensions\": [\n        \"date\",\n        \"country\",\n        \"device\",\n        \"query\",\n        \"page\"\n    ],\n    \"rowLimit\": 25000,\n    \"startRow\": 1\n}",
+							"type": "Expression"
+						},
+						"additionalHeaders": {
+							"Authorization": {
+								"value": "@concat(pipeline().parameters.tokenType,' ', pipeline().parameters.accessToken)",
+								"type": "Expression"
+							}
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "GoogleSEO_Search_Analytics_EA",
+						"type": "DatasetReference",
+						"parameters": {
+							"organizationId": {
+								"value": "@pipeline().parameters.orgId",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "GoogleSEO_AB_EA",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Execute DataFeed",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "Webmasters",
+						"SubFunction": "Get Search Analytics",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Inprogress",
+						"documentCount": 0,
+						"iobExecutionLog": "DataFetch is InProgress"
+					}
+				}
+			},
+			{
+				"name": "Set payloadSize",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fetching Data from GSEO",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PayloadSize1",
+					"value": {
+						"value": "@string(activity('Fetching Data from GSEO').output.dataWritten)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set docCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set payloadSize",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DocumentCount1",
+					"value": {
+						"value": "@string(activity('Fetching Data from GSEO').output.rowsCopied)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Calling DF-Error",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Fetching Data from GSEO",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "Webmasters",
+						"SubFunction": "Get Search Analytics",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"payloadSize": 0,
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Error",
+						"documentCount": 1,
+						"iobExecutionLog": "Not able to fetch the data from GA Rest API"
+					}
+				}
+			},
+			{
+				"name": "Execute Errorhand",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Calling DF-Error",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Global Alert Notification Framework",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"parentPipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"errorMessage": {
+							"value": "@string(replace(activity('Fetching Data from GSEO').error.message, '\"',''''))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set docCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(greater(int(variables('DocumentCount1')), 0), greater(int(variables('PayloadSize1')), 50) )",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Calling DF-NoData",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Webmasters",
+									"SubFunction": "Get Search Analytics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": 0,
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "NoData",
+									"documentCount": 1,
+									"iobExecutionLog": "No Data "
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Calling DF-Inprogress",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Webmasters",
+									"SubFunction": "Get Search Analytics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Inprogress",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Inserting into SF",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-Inprogress",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "GSEO_EA",
+									"type": "DataFlowReference"
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "Calling DF-SF-Error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Inserting into SF",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Webmasters",
+									"SubFunction": "Get Search Analytics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@variables('PayloadSize1')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Error",
+									"documentCount": {
+										"value": "@variables('DocumentCount1')",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Not able to Ingested data to EA SNOWFLAKE"
+								}
+							}
+						},
+						{
+							"name": "Execute DataFeed_Success",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Inserting into SF",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Webmasters",
+									"SubFunction": "Get Search Analytics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Success",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Data is Ingested to EA SNOWFLAKE Successfully ​"
+								}
+							}
+						},
+						{
+							"name": "Execute ErrorHandling for SF error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-SF-Error",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Inserting into SF').error.message, '\"',''''))",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"tokenType": {
+				"type": "string"
+			},
+			"accessToken": {
+				"type": "string"
+			},
+			"loadTs": {
+				"type": "string"
+			},
+			"dataSource": {
+				"type": "string"
+			},
+			"currentTime": {
+				"type": "string"
+			},
+			"runId": {
+				"type": "string"
+			},
+			"orgId": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"PayloadSize1": {
+				"type": "String"
+			},
+			"DocumentCount1": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "GoogleSEO"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-07T00:22:51Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

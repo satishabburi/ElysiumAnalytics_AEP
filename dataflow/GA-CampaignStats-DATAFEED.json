@@ -1,0 +1,147 @@
+{
+	"name": "GA-CampaignStats-DATAFEED",
+	"properties": {
+		"folder": {
+			"name": "GoogleAnalytics"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "GA_Dataflow_AzureBlob_EA",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SF_RW_GA_CAMPAING_AUDIENCE_PERFORMANCE",
+						"type": "DatasetReference"
+					},
+					"name": "sink1",
+					"rejectedDataLinkedService": {
+						"referenceName": "googlea",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "flatten1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     dateFormating as string (replace(replace(replace(replace(rows.c[1].v,\"Date(\",\"\"),\")\",\"\"),\",\",\"\"),\" \",\"-\")),",
+				"     runId as string",
+				"}",
+				"source(output(",
+				"          kind as string,",
+				"          id as string,",
+				"          query as ({start-date} as string, {end-date} as string, ids as string, dimensions as string, metrics as string[], {start-index} as integer, {max-results} as integer),",
+				"          itemsPerPage as integer,",
+				"          totalResults as integer,",
+				"          selfLink as string,",
+				"          previousLink as string,",
+				"          profileInfo as (profileId as string, accountId as string, webPropertyId as string, internalWebPropertyId as string, profileName as string, tableId as string),",
+				"          containsSampledData as boolean,",
+				"          columnHeaders as (name as string, columnType as string, dataType as string)[],",
+				"          totalsForAllResults as ({ga:users} as string, {ga:newUsers} as string, {ga:sessions} as string, {ga:sessionsPerUser} as string, {ga:sessionDuration} as string, {ga:bounces} as string, {ga:pageviews} as string, {ga:pageviewsPerSession} as string, {ga:avgSessionDuration} as string, {ga:bounceRate} as string),",
+				"          dataTable as (cols as (id as string, label as string, type as string)[], rows as (c as (v as string)[])[])",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'documentPerLine') ~> source1",
+				"split1@success foldDown(unroll(dataTable.rows),",
+				"     mapColumn(",
+				"          rows = dataTable.rows",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> flatten1",
+				"flatten1 derive(v1 = iif(split($dateFormating, '-')[2] == \"00\", toDate(replace($dateFormating, '00', '01')), toDate(toString(addMonths(toDate($dateFormating), 1), 'yyyy-MM-dd'))),",
+				"          v2 = rows.c[2],",
+				"          v3 = rows.c[3],",
+				"          v4 = rows.c[4],",
+				"          v5 = rows.c[5],",
+				"          v6 = rows.c[6],",
+				"          v7 = rows.c[7],",
+				"          v8 = rows.c[8],",
+				"          v9 = rows.c[9],",
+				"          v10 = rows.c[10],",
+				"          v11 = rows.c[11],",
+				"          v12 = rows.c[12],",
+				"          v13 = rows.c[13],",
+				"          v14 = rows.c[14],",
+				"          updateDate = currentDate('UTC'),",
+				"          updateTimeStamp = currentTimestamp(),",
+				"          loadDate = currentDate('UTC'),",
+				"          loadTimeStamp = currentTimestamp(),",
+				"          cmp_id = $runId) ~> derivedColumn1",
+				"source1 split(greater(size(dataTable.rows), 1),",
+				"     disjoint: false) ~> split1@(success, failure)",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DATE as date,",
+				"          CAMPAIGN as string,",
+				"          CAMP_ID as string,",
+				"          SOURCE_MEDIUM as string,",
+				"          USERS as decimal(38,0),",
+				"          NEW_USERS as decimal(38,0),",
+				"          SESSIONS as decimal(38,0),",
+				"          NUM_OF_SESSIONS_PER_USER as decimal(20,4),",
+				"          SESSION_DURATION as decimal(38,0),",
+				"          BOUNCES as decimal(38,0),",
+				"          PAGEVIEWS as decimal(38,0),",
+				"          PAGES_SESSION as decimal(20,4),",
+				"          AVG_SESSION_DURATION as decimal(20,4),",
+				"          BOUNCE_RATE as decimal(20,4),",
+				"          LOAD_DT as date,",
+				"          LOAD_TS as timestamp,",
+				"          UPDATE_DT as date,",
+				"          UPDATE_TS as timestamp,",
+				"          DEVICE as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DATE = v1,",
+				"          CAMPAIGN = v2.v,",
+				"          CAMP_ID = cmp_id,",
+				"          SOURCE_MEDIUM = v4.v,",
+				"          USERS = v5.v,",
+				"          NEW_USERS = v6.v,",
+				"          SESSIONS = v7.v,",
+				"          NUM_OF_SESSIONS_PER_USER = v8.v,",
+				"          SESSION_DURATION = v9.v,",
+				"          BOUNCES = v10.v,",
+				"          PAGEVIEWS = v11.v,",
+				"          PAGES_SESSION = v12.v,",
+				"          AVG_SESSION_DURATION = v13.v,",
+				"          BOUNCE_RATE = v14.v,",
+				"          LOAD_DT = loadDate,",
+				"          LOAD_TS = loadTimeStamp,",
+				"          UPDATE_DT = updateDate,",
+				"          UPDATE_TS = updateTimeStamp,",
+				"          DEVICE = v3.v",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

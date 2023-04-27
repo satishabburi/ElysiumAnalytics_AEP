@@ -1,0 +1,486 @@
+{
+	"name": "Twitter",
+	"properties": {
+		"activities": [
+			{
+				"name": "Fetch GA Trigger table",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": "SELECT * FROM \"BOOMIPOC\".\"BOOMI\".\"TRIGGER_TWITTER_LOADS\" ORDER BY LOAD_TS DESC;",
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "SF_TRIGGER_RW_GA_LOADS",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Check data size",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Fetch GA Trigger table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(indexOf(string(activity('Fetch GA Trigger table').output),'firstRow'), -1)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set startDate as last",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "loadTS",
+								"value": {
+									"value": "@formatDateTime(adddays(utcnow('yyyy-MM-dd'), -01), 'yyyy-MM-dd')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set startDate",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "loadTS",
+								"value": {
+									"value": "@formatDateTime(activity('Fetch GA Trigger table').output.firstRow.LOAD_TS, 'yyyy-MM-dd')\n",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set currentTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set runId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "currentTime",
+					"value": {
+						"value": "@utcNow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Execute getConnectionConfig",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Execute getConnectionConfig').output.pipelineReturnValue.status, 'Connected')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Execute DataFeed",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Tweets",
+									"SubFunction": "Private Metrics",
+									"DataSource": {
+										"value": "@variables('DataSource')",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@variables('currentTime')",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@variables('loadTS')",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@variables('currentTime')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@variables('runId')",
+										"type": "Expression"
+									},
+									"feedStatus": "NoConnection",
+									"documentCount": 0
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set orgId",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "orginizationId",
+								"value": {
+									"value": "@activity('Execute getConnectionConfig').output.pipelineReturnValue.connectionData.Cust_Profile.organizationID\n\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set accessToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set orgId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "accessToken",
+								"value": {
+									"value": "@activity('Execute getConnectionConfig').output.pipelineReturnValue.connectionData.Connection_Config.access_token\n\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set tokenType",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set accessToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "tokenType",
+								"value": {
+									"value": "@activity('Execute getConnectionConfig').output.pipelineReturnValue.connectionData.Connection_Config.token_type\n\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Execute GA-Pagestats",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set tokenType",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "GA-PageStats",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"loadTs": {
+										"value": "@variables('loadTS')",
+										"type": "Expression"
+									},
+									"dataSource": {
+										"value": "@variables('DataSource')",
+										"type": "Expression"
+									},
+									"currentTime": {
+										"value": "@variables('currentTime')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@variables('runId')",
+										"type": "Expression"
+									},
+									"accessToken": {
+										"value": "@variables('accessToken')",
+										"type": "Expression"
+									},
+									"tokenType": {
+										"value": "@variables('tokenType')",
+										"type": "Expression"
+									},
+									"orgId": {
+										"value": "@variables('orginizationId')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Execute GA-CampaignStats",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Execute GA-Pagestats",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "GA-CampaignStats",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"loadTs": {
+										"value": "@variables('loadTS')",
+										"type": "Expression"
+									},
+									"dataSource": {
+										"value": "@variables('DataSource')",
+										"type": "Expression"
+									},
+									"currentTime": {
+										"value": "@variables('currentTime')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@variables('runId')",
+										"type": "Expression"
+									},
+									"accessToken": {
+										"value": "@variables('accessToken')",
+										"type": "Expression"
+									},
+									"tokenType": {
+										"value": "@variables('tokenType')",
+										"type": "Expression"
+									},
+									"orgId": {
+										"value": "@variables('orginizationId')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set TriggerTable",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Execute GA-CampaignStats",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "Dynamic Tenant Snowflake Connection",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"parameters": [
+											{
+												"name": "LOAD_TS",
+												"type": "String",
+												"value": {
+													"value": "@utcNow()",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "FEED_JOB_ID",
+												"type": "String",
+												"value": {
+													"value": "@variables('runId')",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "RANGE",
+												"type": "Int64",
+												"value": {
+													"value": "@div(sub(ticks(utcNow()),ticks(variables('loadTS'))),864000000000)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											}
+										],
+										"type": "NonQuery",
+										"text": "Insert into \"BOOMIPOC\".\"BOOMI\".\"TRIGGER_TWITTER_LOADS\" (LOAD_TS, FEED_JOB_ID, RANGE) \nvalues (?,?,?)"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "Execute Errorhandling",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set TriggerTable",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Set TriggerTable').error.message, '\"',''''))\n",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set runId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check data size",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "runId",
+					"value": {
+						"value": "@pipeline().RunId",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute getConnectionConfig",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set currentTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Get ConnectionConfig By DataSource",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"dataSource": {
+							"value": "@variables('DataSource')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"variables": {
+			"loadTS": {
+				"type": "String"
+			},
+			"DataSource": {
+				"type": "String",
+				"defaultValue": "Twitter"
+			},
+			"runId": {
+				"type": "String"
+			},
+			"currentTime": {
+				"type": "String"
+			},
+			"accessToken": {
+				"type": "String"
+			},
+			"tokenType": {
+				"type": "String"
+			},
+			"orginizationId": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Twitter"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-26T19:55:48Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

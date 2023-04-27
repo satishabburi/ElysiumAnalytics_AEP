@@ -1,0 +1,124 @@
+{
+	"name": "Get ConnectionConfig By DataSource",
+	"properties": {
+		"activities": [
+			{
+				"name": "fetching data from SF",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "Dynamic Tenant Snowflake Connection",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"parameters": [
+								{
+									"name": "DATASOURCE_ID",
+									"type": "String",
+									"value": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"direction": "Input"
+								}
+							],
+							"type": "Query",
+							"text": "SELECT * FROM \"AZURE\".\"PUBLIC\".\"DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG\" where DATASOURCE_ID = ?"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "fetching data from SF",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(activity('fetching data from SF').output.resultSetCount, 0)\n\n",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set variable2",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "status",
+										"value": {
+											"type": "String",
+											"content": "NoConnection"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set variable1",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "pipelineReturnValue",
+								"value": [
+									{
+										"key": "connectionData",
+										"value": {
+											"type": "Expression",
+											"content": "@json(decodeBase64(activity('fetching data from SF').output.resultSets[0].rows[0].CONNECTION_CONFIG))"
+										}
+									},
+									{
+										"key": "status",
+										"value": {
+											"type": "Expression",
+											"content": "@activity('fetching data from SF').output.resultSets[0].rows[0].STATUS\r\n\r\n"
+										}
+									}
+								],
+								"setSystemVariable": true
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"dataSource": {
+				"type": "string",
+				"defaultValue": "GoogleAnalytics"
+			}
+		},
+		"folder": {
+			"name": "Connection Mgnt"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-11T17:27:00Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

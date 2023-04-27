@@ -1,0 +1,786 @@
+{
+	"name": "SproutSocial SocialMediaMetrics",
+	"properties": {
+		"activities": [
+			{
+				"name": "Execute Errorhand",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Calling DF-Error",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Global Alert Notification Framework",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"parentPipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"errorMessage": {
+							"value": "@string(replace(activity('Fetching data from SPROUT Rest API and save into AB').error.message, '\"',''''))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set payloadSize",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Delete all ss files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PayloadSize1",
+					"value": {
+						"value": "@string(activity('Merge the data').output.dataWritten)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set docCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set payloadSize",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DocumentCount1",
+					"value": {
+						"value": "@string(activity('Merge the data').output.rowsCopied)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute DataFeed",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "SocialMedia",
+						"SubFunction": "Metrics",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Inprogress",
+						"documentCount": 0
+					}
+				}
+			},
+			{
+				"name": "Calling DF-Error",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Merge the data",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "SocialMedia",
+						"SubFunction": "Metrics",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"payloadSize": 0,
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Error",
+						"documentCount": 1,
+						"iobExecutionLog": "Not able to fetch the data from GA Rest API"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set docCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(greater(int(variables('DocumentCount1')), 0), greater(int(variables('PayloadSize1')), 38) )",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Calling DF-NoData",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": 0,
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "NoData",
+									"documentCount": 1
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Calling DF-Inprogress",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Inprogress",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Calling DF-SF-Error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Injecting data into blob",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@variables('PayloadSize1')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Error",
+									"documentCount": {
+										"value": "@variables('DocumentCount1')",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Not able to Ingested data to EA SNOWFLAKE"
+								}
+							}
+						},
+						{
+							"name": "Execute DataFeed_Success",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Injecting data into blob",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "SocialMedia",
+									"SubFunction": "Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Success",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Data is Ingested to EA SNOWFLAKE Successfully ​"
+								}
+							}
+						},
+						{
+							"name": "Execute ErrorHandling for SF error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-SF-Error",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Injecting data into blob').error.message, '\"',''''))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Injecting data into blob",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-Inprogress",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "SproutSocial_Analytics_DATAFEED",
+									"type": "DataFlowReference",
+									"parameters": {
+										"feedId": {
+											"value": "'@{pipeline().RunId}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "DeleteSproutFiles",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Execute DataFeed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "SproutSocial_Metrics",
+						"type": "DatasetReference"
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "googlea",
+							"type": "LinkedServiceReference"
+						}
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"recursive": true,
+						"wildcardFileName": "Sprout*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "Set startpage",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "DeleteSproutFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "page",
+					"value": "1"
+				}
+			},
+			{
+				"name": "Retrieve all SproutSocial results",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set startpage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(int(variables('page')), activity('Get page from SproutSocial').output.paging.total_pages)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get page from SproutSocial",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://api.sproutsocial.com/v1/1565870/analytics/posts/",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json",
+									"Authorization": {
+										"value": "@concat(pipeline().parameters.tokenType,' ', pipeline().parameters.accessToken)",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "{\n    \"fields\": [\n    \"content_category\"\n,\"created_time\"\n,\"from\"\n,\"from.guid\"\n,\"from.name\"\t\n,\"from.profile_picture\"\t\n,\"from.screen_name\"\t\n,\"guid\"\n,\"internal\"\n,\"internal.tags.id\"\t\n,\"internal.sent_by.id\"\t\n,\"internal.sent_by.email\"\t\n,\"internal.sent_by.first_name\"\t\n,\"internal.sent_by.last_name\"\t\n,\"post_type\"\t\n,\"post_category\"\t\n,\"network\"\n,\"perma_link\"\n,\"profile_guid\"\n,\"text\"\n,\"title\"\n,\"clickthrough_link\"\n,\"clickthrough_link.name\"\t\n,\"clickthrough_link.long\"\t\n,\"clickthrough_link.short\"\t\n,\"hashtags\"\n,\"visual_media\"\n  ],\n \"metrics\": [\"lifetime.impressions\"\n,\"lifetime.post_media_views\"\n,\"lifetime.video_views\"\n,\"lifetime.reactions\"\n,\"lifetime.likes\"\n,\"lifetime.comments_count\"\n,\"lifetime.shares_count\"\n,\"lifetime.post_content_clicks\"\n,\"lifetime.post_link_clicks\"\n,\"lifetime.post_content_clicks_other\"\n,\"lifetime.post_media_clicks\"\n,\"lifetime.post_hashtag_clicks\"\n,\"lifetime.post_detail_expand_clicks\"\n,\"lifetime.post_profile_clicks\"\n,\"lifetime.engagements_other\"\n,\"lifetime.post_followers_gained\"\n,\"lifetime.post_app_engagements\"\n,\"lifetime.post_app_installs\"\n,\"lifetime.post_app_opens\"\n,\"lifetime.impressions\"\n,\"lifetime.impressions_organic\"\n,\"lifetime.impressions_viral\"\n,\"lifetime.impressions_nonviral\"\n,\"lifetime.impressions_paid\"\n,\"lifetime.impressions_follower\"\n,\"lifetime.impressions_follower_organic\"\n,\"lifetime.impressions_follower_paid\"\n,\"lifetime.impressions_nonfollower\"\n,\"lifetime.impressions_nonfollower_organic\"\n,\"lifetime.impressions_nonfollower_paid\"\n,\"lifetime.impressions_unique\"\n,\"lifetime.impressions_organic_unique\"\n,\"lifetime.impressions_viral_unique\"\n,\"lifetime.impressions_nonviral_unique\"\n,\"lifetime.impressions_paid_unique\"\n,\"lifetime.impressions_follower_unique\"\n,\"lifetime.impressions_follower_paid_unique\"\n,\"lifetime.reactions\"\n,\"lifetime.likes\"\n,\"lifetime.reactions_love\"\n,\"lifetime.reactions_haha\"\n,\"lifetime.reactions_wow\"\n,\"lifetime.reactions_sad\"\n,\"lifetime.reactions_angry\"\n,\"lifetime.comments_count\"\n,\"lifetime.shares_count\"\n,\"lifetime.question_answers\"\n,\"lifetime.post_content_clicks\"\n,\"lifetime.post_link_clicks\"\n,\"lifetime.post_photo_view_clicks\"\n,\"lifetime.post_video_play_clicks\"\n,\"lifetime.post_content_clicks_other\"\n,\"lifetime.negative_feedback\"\n,\"lifetime.engagements_unique\"\n,\"lifetime.engagements_follower_unique\"\n,\"lifetime.post_activity_unique\"\n,\"lifetime.reactions_unique\"\n,\"lifetime.comments_count_unique\"\n,\"lifetime.shares_count_unique\"\n,\"lifetime.question_answers_unique\"\n,\"lifetime.post_content_clicks_unique\"\n,\"lifetime.post_link_clicks_unique\"\n,\"lifetime.post_photo_view_clicks_unique\"\n,\"lifetime.post_video_play_clicks_unique\"\n,\"lifetime.post_other_clicks_unique\"\n,\"lifetime.negative_feedback_unique\"\n,\"video_length\"\n,\"lifetime.video_views\"\n,\"lifetime.video_views_organic\"\n,\"lifetime.video_views_paid\"\n,\"lifetime.video_views_autoplay\"\n,\"lifetime.video_views_click_to_play\"\n,\"lifetime.video_views_sound_on\"\n,\"lifetime.video_views_sound_off\"\n,\"lifetime.video_views_10s\"\n,\"lifetime.video_views_10s_organic\"\n,\"lifetime.video_views_10s_paid\"\n,\"lifetime.video_views_10s_autoplay\"\n,\"lifetime.video_views_10s_click_to_play\"\n,\"lifetime.video_views_10s_sound_on\"\n,\"lifetime.video_views_10s_sound_off\"\n,\"lifetime.video_views_partial\"\n,\"lifetime.video_views_partial_organic\"\n,\"lifetime.video_views_partial_paid\"\n,\"lifetime.video_views_partial_autoplay\"\n,\"lifetime.video_views_partial_click_to_play\"\n,\"lifetime.video_views_30s_complete\"\n,\"lifetime.video_views_30s_complete_organic\"\n,\"lifetime.video_views_30s_complete_paid\"\n,\"lifetime.video_views_30s_complete_autoplay\"\n,\"lifetime.video_views_30s_complete_click_to_play\"\n,\"lifetime.video_views_p95\"\n,\"lifetime.video_views_p95_organic\"\n,\"lifetime.video_views_p95_paid\"\n,\"lifetime.video_views_unique\"\n,\"lifetime.video_views_organic_unique\"\n,\"lifetime.video_views_paid_unique\"\n,\"lifetime.video_views_10s_unique\"\n,\"lifetime.video_views_30s_complete_unique\"\n,\"lifetime.video_views_p95_organic_unique\"\n,\"lifetime.video_views_p95_paid_unique\"\n,\"lifetime.video_view_time_per_view\"\n,\"lifetime.video_view_time\"\n,\"lifetime.video_view_time_organic\"\n,\"lifetime.video_view_time_paid\"\n,\"lifetime.video_ad_break_impressions\"\n,\"lifetime.video_ad_break_earnings\"\n,\"lifetime.video_ad_break_cost_per_impression\"\n,\"lifetime.impressions\"\n,\"lifetime.impressions_unique\"\n,\"lifetime.video_views\"\n,\"lifetime.reactions\"\n,\"lifetime.likes\"\n,\"lifetime.comments_count\"\n,\"lifetime.saves\"\n,\"lifetime.comments_count\"\n,\"lifetime.story_taps_back\"\n,\"lifetime.story_taps_forward\"\n,\"lifetime.story_exits\"\n,\"lifetime.impressions\"\n,\"lifetime.reactions\"\n,\"lifetime.comments_count\"\n,\"lifetime.shares_count\"\n,\"lifetime.post_content_clicks\"\n,\"lifetime.video_views\"],\n  \"filters\": [\n    \"customer_profile_id.eq(@{pipeline().parameters.customerProfileIds})\",\n    \"created_time.in(@{pipeline().parameters.loadTs}...@{utcnow('yyyy-MM-dd')})\"\n  ],\n  \"page\":@{variables('page')}\n\n}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set next page",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Fetching data from SPROUT Rest API and save into AB",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "page",
+								"value": {
+									"value": "@string(add(activity('Get page from SproutSocial').output.paging.current_page,1 ))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Fetching data from SPROUT Rest API and save into AB",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Get page from SproutSocial",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "POST",
+									"requestBody": {
+										"value": "{\n    \"fields\": [\n    \"content_category\"\n,\"created_time\"\n,\"from\"\n,\"from.guid\"\n,\"from.name\"\t\n,\"from.profile_picture\"\t\n,\"from.screen_name\"\t\n,\"guid\"\n,\"internal\"\n,\"internal.tags.id\"\t\n,\"internal.sent_by.id\"\t\n,\"internal.sent_by.email\"\t\n,\"internal.sent_by.first_name\"\t\n,\"internal.sent_by.last_name\"\t\n,\"post_type\"\t\n,\"post_category\"\t\n,\"network\"\n,\"perma_link\"\n,\"profile_guid\"\n,\"text\"\n,\"title\"\n,\"clickthrough_link\"\n,\"clickthrough_link.name\"\t\n,\"clickthrough_link.long\"\t\n,\"clickthrough_link.short\"\t\n,\"hashtags\"\n,\"visual_media\"\n  ],\n \"metrics\": [\"lifetime.impressions\"\n,\"lifetime.post_media_views\"\n,\"lifetime.video_views\"\n,\"lifetime.reactions\"\n,\"lifetime.likes\"\n,\"lifetime.comments_count\"\n,\"lifetime.shares_count\"\n,\"lifetime.post_content_clicks\"\n,\"lifetime.post_link_clicks\"\n,\"lifetime.post_content_clicks_other\"\n,\"lifetime.post_media_clicks\"\n,\"lifetime.post_hashtag_clicks\"\n,\"lifetime.post_detail_expand_clicks\"\n,\"lifetime.post_profile_clicks\"\n,\"lifetime.engagements_other\"\n,\"lifetime.post_followers_gained\"\n,\"lifetime.post_app_engagements\"\n,\"lifetime.post_app_installs\"\n,\"lifetime.post_app_opens\"\n,\"lifetime.impressions\"\n,\"lifetime.impressions_organic\"\n,\"lifetime.impressions_viral\"\n,\"lifetime.impressions_nonviral\"\n,\"lifetime.impressions_paid\"\n,\"lifetime.impressions_follower\"\n,\"lifetime.impressions_follower_organic\"\n,\"lifetime.impressions_follower_paid\"\n,\"lifetime.impressions_nonfollower\"\n,\"lifetime.impressions_nonfollower_organic\"\n,\"lifetime.impressions_nonfollower_paid\"\n,\"lifetime.impressions_unique\"\n,\"lifetime.impressions_organic_unique\"\n,\"lifetime.impressions_viral_unique\"\n,\"lifetime.impressions_nonviral_unique\"\n,\"lifetime.impressions_paid_unique\"\n,\"lifetime.impressions_follower_unique\"\n,\"lifetime.impressions_follower_paid_unique\"\n,\"lifetime.reactions\"\n,\"lifetime.likes\"\n,\"lifetime.reactions_love\"\n,\"lifetime.reactions_haha\"\n,\"lifetime.reactions_wow\"\n,\"lifetime.reactions_sad\"\n,\"lifetime.reactions_angry\"\n,\"lifetime.comments_count\"\n,\"lifetime.shares_count\"\n,\"lifetime.question_answers\"\n,\"lifetime.post_content_clicks\"\n,\"lifetime.post_link_clicks\"\n,\"lifetime.post_photo_view_clicks\"\n,\"lifetime.post_video_play_clicks\"\n,\"lifetime.post_content_clicks_other\"\n,\"lifetime.negative_feedback\"\n,\"lifetime.engagements_unique\"\n,\"lifetime.engagements_follower_unique\"\n,\"lifetime.post_activity_unique\"\n,\"lifetime.reactions_unique\"\n,\"lifetime.comments_count_unique\"\n,\"lifetime.shares_count_unique\"\n,\"lifetime.question_answers_unique\"\n,\"lifetime.post_content_clicks_unique\"\n,\"lifetime.post_link_clicks_unique\"\n,\"lifetime.post_photo_view_clicks_unique\"\n,\"lifetime.post_video_play_clicks_unique\"\n,\"lifetime.post_other_clicks_unique\"\n,\"lifetime.negative_feedback_unique\"\n,\"video_length\"\n,\"lifetime.video_views\"\n,\"lifetime.video_views_organic\"\n,\"lifetime.video_views_paid\"\n,\"lifetime.video_views_autoplay\"\n,\"lifetime.video_views_click_to_play\"\n,\"lifetime.video_views_sound_on\"\n,\"lifetime.video_views_sound_off\"\n,\"lifetime.video_views_10s\"\n,\"lifetime.video_views_10s_organic\"\n,\"lifetime.video_views_10s_paid\"\n,\"lifetime.video_views_10s_autoplay\"\n,\"lifetime.video_views_10s_click_to_play\"\n,\"lifetime.video_views_10s_sound_on\"\n,\"lifetime.video_views_10s_sound_off\"\n,\"lifetime.video_views_partial\"\n,\"lifetime.video_views_partial_organic\"\n,\"lifetime.video_views_partial_paid\"\n,\"lifetime.video_views_partial_autoplay\"\n,\"lifetime.video_views_partial_click_to_play\"\n,\"lifetime.video_views_30s_complete\"\n,\"lifetime.video_views_30s_complete_organic\"\n,\"lifetime.video_views_30s_complete_paid\"\n,\"lifetime.video_views_30s_complete_autoplay\"\n,\"lifetime.video_views_30s_complete_click_to_play\"\n,\"lifetime.video_views_p95\"\n,\"lifetime.video_views_p95_organic\"\n,\"lifetime.video_views_p95_paid\"\n,\"lifetime.video_views_unique\"\n,\"lifetime.video_views_organic_unique\"\n,\"lifetime.video_views_paid_unique\"\n,\"lifetime.video_views_10s_unique\"\n,\"lifetime.video_views_30s_complete_unique\"\n,\"lifetime.video_views_p95_organic_unique\"\n,\"lifetime.video_views_p95_paid_unique\"\n,\"lifetime.video_view_time_per_view\"\n,\"lifetime.video_view_time\"\n,\"lifetime.video_view_time_organic\"\n,\"lifetime.video_view_time_paid\"\n,\"lifetime.video_ad_break_impressions\"\n,\"lifetime.video_ad_break_earnings\"\n,\"lifetime.video_ad_break_cost_per_impression\"\n,\"lifetime.impressions\"\n,\"lifetime.impressions_unique\"\n,\"lifetime.video_views\"\n,\"lifetime.reactions\"\n,\"lifetime.likes\"\n,\"lifetime.comments_count\"\n,\"lifetime.saves\"\n,\"lifetime.comments_count\"\n,\"lifetime.story_taps_back\"\n,\"lifetime.story_taps_forward\"\n,\"lifetime.story_exits\"\n,\"lifetime.impressions\"\n,\"lifetime.reactions\"\n,\"lifetime.comments_count\"\n,\"lifetime.shares_count\"\n,\"lifetime.post_content_clicks\"\n,\"lifetime.video_views\"],\n  \"filters\": [\n    \"customer_profile_id.eq(@{pipeline().parameters.customerProfileIds})\",\n    \"created_time.in(@{pipeline().parameters.loadTs}...@{utcnow('yyyy-MM-dd')})\"\n  ],\n  \"page\":@{variables('page')}\n\n}",
+										"type": "Expression"
+									},
+									"additionalHeaders": {
+										"Content-Type": "application/json",
+										"Authorization": {
+											"value": "@concat(pipeline().parameters.tokenType,' ', pipeline().parameters.accessToken)",
+											"type": "Expression"
+										}
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings",
+										"copyBehavior": "MergeFiles"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings",
+										"filePattern": "setOfObjects"
+									}
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "googlea",
+										"type": "LinkedServiceReference"
+									}
+								},
+								"enableSkipIncompatibleRow": false
+							},
+							"inputs": [
+								{
+									"referenceName": "REST_SproutSocial_Analytics",
+									"type": "DatasetReference",
+									"parameters": {
+										"organizationId": "1565870"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SproutSocial_Metrics",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "Merge the data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Retrieve all SproutSocial results",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "SS*",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings",
+							"copyBehavior": "MergeFiles"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SproutSocial_Metrics",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SproutSocial_Metrics_Pipeline_AzureBlob",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Delete all ss files",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Merge the data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "SproutSocial_Metrics",
+						"type": "DatasetReference"
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "googlea",
+							"type": "LinkedServiceReference"
+						}
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"recursive": true,
+						"wildcardFileName": "SS*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"parameters": {
+			"loadTs": {
+				"type": "string"
+			},
+			"dataSource": {
+				"type": "string"
+			},
+			"currentTime": {
+				"type": "string"
+			},
+			"runId": {
+				"type": "string"
+			},
+			"accessToken": {
+				"type": "string"
+			},
+			"tokenType": {
+				"type": "string"
+			},
+			"orgId": {
+				"type": "string"
+			},
+			"customerProfileIds": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"PayloadSize1": {
+				"type": "String"
+			},
+			"DocumentCount1": {
+				"type": "String"
+			},
+			"page": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "SproutSocial"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-20T20:18:17Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

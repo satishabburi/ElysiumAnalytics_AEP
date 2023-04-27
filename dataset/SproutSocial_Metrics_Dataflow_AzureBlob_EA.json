@@ -1,0 +1,24 @@
+{
+	"name": "SproutSocial_Metrics_Dataflow_AzureBlob_EA",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "SproutSocial"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "SproutMetrics.json",
+				"container": "googleseo"
+			},
+			"encodingName": "UTF-8"
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

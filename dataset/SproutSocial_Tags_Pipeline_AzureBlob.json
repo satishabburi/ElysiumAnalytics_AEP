@@ -1,0 +1,24 @@
+{
+	"name": "SproutSocial_Tags_Pipeline_AzureBlob",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "googlea",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "SproutSocial"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "SproutTags.json",
+				"container": "sproutsocial"
+			},
+			"encodingName": "UTF-8 without BOM"
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

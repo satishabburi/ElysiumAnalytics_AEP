@@ -1,0 +1,108 @@
+{
+	"name": "GSEO_EA",
+	"properties": {
+		"folder": {
+			"name": "GoogleSEO"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "GoogleSEO_DataFlow_EA",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SF_RW_GS_SEO_REPORT_SSTECH_EA",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "flatten1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          rows as (keys as string[], clicks as integer, impressions as integer, ctr as double, position as integer)[],",
+				"          responseAggregationType as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'arrayOfDocuments') ~> source1",
+				"source1 foldDown(unroll(rows),",
+				"     mapColumn(",
+				"          clicks = rows.clicks,",
+				"          impressions = rows.impressions,",
+				"          ctr = rows.ctr,",
+				"          position = rows.position,",
+				"          keys = rows.keys",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> flatten1",
+				"flatten1 derive(AE1 = keys[1],",
+				"          AE2 = upper(keys[2]),",
+				"          AE3 = keys[3],",
+				"          AE4 = keys[4],",
+				"          AE5 = keys[5],",
+				"          updateDate = currentDate('UTC'),",
+				"          updateTimestamp = currentTimestamp(),",
+				"          loadDate = currentDate('UTC'),",
+				"          loadTimeStamp = currentTimestamp()) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DATE as date,",
+				"          SEARCH_QUERY as string,",
+				"          LANDING_PAGE_TITLE_TAG as string,",
+				"          PATH as string,",
+				"          COUNTRY as string,",
+				"          COUNTRY_CODE as string,",
+				"          DEVICE as string,",
+				"          IMPRESSIONS as decimal(38,0),",
+				"          CLICKS as decimal(38,0),",
+				"          CTR as decimal(18,4),",
+				"          AVERAGE_POSITION as decimal(18,4),",
+				"          LOAD_DT as date,",
+				"          UPDATE_DT as date,",
+				"          LOAD_TS as timestamp,",
+				"          UPDATE_TS as timestamp",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          CLICKS = clicks,",
+				"          IMPRESSIONS = impressions,",
+				"          CTR = ctr,",
+				"          AVERAGE_POSITION = position,",
+				"          DATE = AE1,",
+				"          COUNTRY_CODE = AE2,",
+				"          DEVICE = AE3,",
+				"          SEARCH_QUERY = AE4,",
+				"          PATH = AE5,",
+				"          LOAD_DT = loadDate,",
+				"          UPDATE_DT = updateDate,",
+				"          LOAD_TS = loadTimeStamp,",
+				"          UPDATE_TS = updateTimestamp",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

@@ -1,0 +1,63 @@
+{
+	"name": "SproutSocial_Tags_DATAFEED",
+	"properties": {
+		"folder": {
+			"name": "SproutSocial"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SproutSocial_Tags_Dataflow_AzureBlob_EA",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SproutSocial_Tags_Dataflow_AzureBlob_EA",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "flatten1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     feedId as string",
+				"}",
+				"source(output(",
+				"          data as (clickthrough_link as (long as string, name as string), content_category as string, created_time as timestamp, customer_profile_id as integer, from as (guid as string, name as string, profile_picture as string), guid as string, internal as (sent_by as (email as string, first_name as string, id as integer, last_name as string), tags as (id as integer)[]), metrics as ({lifetime.comments_count} as boolean, {lifetime.impressions} as short, {lifetime.impressions_organic} as short, {lifetime.likes} as short, {lifetime.post_content_clicks} as short, {lifetime.post_link_clicks} as short, {lifetime.reactions} as short, {lifetime.shares_count} as short), network as string, perma_link as string, post_category as string, post_type as string, profile_guid as string, sent as boolean, text as string, visual_media as (media_type as string, media_url as string, thumbnail_url as string)[])[],",
+				"          paging as (current_page as boolean, total_pages as boolean)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     documentForm: 'documentPerLine') ~> source1",
+				"source1 foldDown(unroll(data),",
+				"     mapColumn(",
+				"          data",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> flatten1",
+				"flatten1 derive(feed_job_id = $feedId) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['SproutSocialTags.json'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
+			]
+		}
+	}
+}

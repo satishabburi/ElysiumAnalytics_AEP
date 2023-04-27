@@ -1,0 +1,63 @@
+{
+	"name": "SF_DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Dynamic Tenant Snowflake Connection",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Common"
+		},
+		"annotations": [],
+		"type": "SnowflakeTable",
+		"schema": [
+			{
+				"name": "DATASOURCE_ID",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "DATASOURCE_NAME",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "CONNECTION_CONFIG",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "ORGANIZATION_ID",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "STATUS",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			},
+			{
+				"name": "EXECUTION_DATE",
+				"type": "TIMESTAMP_TZ",
+				"precision": 29,
+				"scale": 9
+			},
+			{
+				"name": "STATUS_LOG",
+				"type": "VARCHAR",
+				"precision": 0,
+				"scale": 0
+			}
+		],
+		"typeProperties": {
+			"schema": "PUBLIC",
+			"table": "DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

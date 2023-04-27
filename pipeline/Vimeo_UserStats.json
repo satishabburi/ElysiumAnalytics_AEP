@@ -1,0 +1,1041 @@
+{
+	"name": "Vimeo_UserStats",
+	"properties": {
+		"activities": [
+			{
+				"name": "Fetching data from vimeo Rest API and save into AB",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Execute DataFeed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"additionalHeaders": {
+							"Authorization": {
+								"value": "@concat(pipeline().parameters.tokenType,' ', pipeline().parameters.accessToken)",
+								"type": "Expression"
+							}
+						},
+						"paginationRules": {
+							"supportRFC5988": "true"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "googlea",
+							"type": "LinkedServiceReference"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "$['uri']"
+								},
+								"sink": {
+									"name": "URI",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['name']"
+								},
+								"sink": {
+									"name": "NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['link']"
+								},
+								"sink": {
+									"name": "LINK",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['capabilities']['hasLiveSubscription']"
+								},
+								"sink": {
+									"name": "HAS_LIVE_SUBSCRIPTION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['capabilities']['hasEnterpriseLihp']"
+								},
+								"sink": {
+									"name": "HAS_ENTERPRISE_LIHP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['capabilities']['hasSvvTimecodedComments']"
+								},
+								"sink": {
+									"name": "HAS_SVV_TIME_CODED_COMMENTS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['location']"
+								},
+								"sink": {
+									"name": "LOCATION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['gender']"
+								},
+								"sink": {
+									"name": "GENDER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['bio']"
+								},
+								"sink": {
+									"name": "BIO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['short_bio']"
+								},
+								"sink": {
+									"name": "SHORT_BIO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['pictures']"
+								},
+								"sink": {
+									"name": "PICTURES"
+								}
+							},
+							{
+								"source": {
+									"path": "$['websites']"
+								},
+								"sink": {
+									"name": "WEBSITES",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['metadata']"
+								},
+								"sink": {
+									"name": "METADATA",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['location_details']"
+								},
+								"sink": {
+									"name": "LOCATION_DETAILS"
+								}
+							},
+							{
+								"source": {
+									"path": "$['skills']"
+								},
+								"sink": {
+									"name": "SKILLS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['available_for_hire']"
+								},
+								"sink": {
+									"name": "AVAILABLE_FOR_HIRE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['can_work_remotely']"
+								},
+								"sink": {
+									"name": "CAN_WORK_REMOTELY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['resource_key']"
+								},
+								"sink": {
+									"name": "RESOURCE_KEY",
+									"type": "String"
+								}
+							}
+						],
+						"collectionReference": ""
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Vimeo_UserStats_REST_API",
+						"type": "DatasetReference",
+						"parameters": {
+							"uri": {
+								"value": "@pipeline().parameters.orgId",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Vimeo_Pipeline_AB",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Execute Errorhand",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Calling DF-Error",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Global Alert Notification Framework",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"parentPipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"errorMessage": {
+							"value": "@string(replace(activity('Fetching data from vimeo Rest API and save into AB').error.message, '\"',''''))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set payloadSize",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fetching data from vimeo Rest API and save into AB",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PayloadSize1",
+					"value": {
+						"value": "@string(activity('Fetching data from vimeo Rest API and save into AB').output.dataWritten)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set docCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set payloadSize",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DocumentCount1",
+					"value": {
+						"value": "@string(activity('Fetching data from vimeo Rest API and save into AB').output.rowsCopied)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute DataFeed",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "Users",
+						"SubFunction": "User Metrics",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Inprogress",
+						"documentCount": 0
+					}
+				}
+			},
+			{
+				"name": "Calling DF-Error",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Fetching data from vimeo Rest API and save into AB",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "Users",
+						"SubFunction": "User Metrics",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"payloadSize": 0,
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Error",
+						"documentCount": 1,
+						"iobExecutionLog": "Not able to fetch the data from GA Rest API"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set docCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(greater(int(variables('DocumentCount1')), 0), greater(int(variables('PayloadSize1')), 38) )",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Calling DF-NoData",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Users",
+									"SubFunction": "User Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": 0,
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "NoData",
+									"documentCount": 1
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Calling DF-Inprogress",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Users",
+									"SubFunction": "User Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Inprogress",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Calling DF-SF-Error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Script",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Users",
+									"SubFunction": "User Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@variables('PayloadSize1')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Error",
+									"documentCount": {
+										"value": "@variables('DocumentCount1')",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Not able to Ingested data to EA SNOWFLAKE"
+								}
+							}
+						},
+						{
+							"name": "Execute DataFeed_Success",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Script",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Users",
+									"SubFunction": "User Metrics",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Success",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Data is Ingested to EA SNOWFLAKE Successfully ​"
+								}
+							}
+						},
+						{
+							"name": "Execute ErrorHandling for SF error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-SF-Error",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Script').error.message, '\"',''''))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Lookup",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Copy data Injecting the data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"dataset": {
+									"referenceName": "Vimeo_Dataflow_AzureBlob_EA",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						},
+						{
+							"name": "Script",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "Lookup",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "Dynamic Tenant Snowflake Connection",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"parameters": [
+											{
+												"name": "PICTURES",
+												"type": "String",
+												"value": {
+													"value": "@string(activity('Lookup').output.value[0].pictures)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "WEBSITES",
+												"type": "String",
+												"value": {
+													"value": "@string(activity('Lookup').output.value[0].websites)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "METADATA",
+												"type": "String",
+												"value": {
+													"value": "@string(activity('Lookup').output.value[0].metadata)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "LOCATION_DETAILS",
+												"type": "String",
+												"value": {
+													"value": "@string(activity('Lookup').output.value[0].location_details)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "SKILLS",
+												"type": "String",
+												"value": {
+													"value": "@string(activity('Lookup').output.value[0].skills)",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "LOAD_TS",
+												"type": "String",
+												"value": {
+													"value": "@utcNow()",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "RESOURCE_KEY",
+												"type": "String",
+												"value": {
+													"value": "@activity('Lookup').output.value[0].resource_key",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											}
+										],
+										"type": "NonQuery",
+										"text": "update AZURE.PUBLIC.RW_VIMEO_USER_DETAILS set PICTURES = parse_json(?), WEBSITES = parse_json(?), METADATA = parse_json(?), LOCATION_DETAILS = parse_json(?), SKILLS = parse_json(?), LOAD_TS = ?  where RESOURCE_KEY = ?"
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "Copy data Injecting the data",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-Inprogress",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SnowflakeSink",
+									"importSettings": {
+										"type": "SnowflakeImportCopyCommand"
+									}
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "googlea",
+										"type": "LinkedServiceReference"
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"path": "$['uri']"
+											},
+											"sink": {
+												"name": "URI",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['name']"
+											},
+											"sink": {
+												"name": "NAME",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['link']"
+											},
+											"sink": {
+												"name": "LINK",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['capabilities']['hasLiveSubscription']"
+											},
+											"sink": {
+												"name": "HAS_LIVE_SUBSCRIPTION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['capabilities']['hasEnterpriseLihp']"
+											},
+											"sink": {
+												"name": "HAS_ENTERPRISE_LIHP",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['capabilities']['hasSvvTimecodedComments']"
+											},
+											"sink": {
+												"name": "HAS_SVV_TIME_CODED_COMMENTS",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['location']"
+											},
+											"sink": {
+												"name": "LOCATION",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['gender']"
+											},
+											"sink": {
+												"name": "GENDER",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['bio']"
+											},
+											"sink": {
+												"name": "BIO",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['short_bio']"
+											},
+											"sink": {
+												"name": "SHORT_BIO",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['available_for_hire']"
+											},
+											"sink": {
+												"name": "AVAILABLE_FOR_HIRE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['can_work_remotely']"
+											},
+											"sink": {
+												"name": "CAN_WORK_REMOTELY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['resource_key']"
+											},
+											"sink": {
+												"name": "RESOURCE_KEY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"path": "$['created_time']"
+											},
+											"sink": {
+												"name": "CREATED_TIME",
+												"type": "DateTime"
+											}
+										}
+									],
+									"mapComplexValuesToString": true
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Vimeo_Dataflow_AzureBlob_EA",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SF_RW_VIMEO_USER_DETAILS",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "Execute ErrorHandling for SF error_copy1",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Copy data Injecting the data",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Copy data Injecting the data').error.message, '\"',''''))",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"loadTs": {
+				"type": "string"
+			},
+			"dataSource": {
+				"type": "string"
+			},
+			"currentTime": {
+				"type": "string"
+			},
+			"runId": {
+				"type": "string"
+			},
+			"accessToken": {
+				"type": "string"
+			},
+			"tokenType": {
+				"type": "string"
+			},
+			"orgId": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"PayloadSize1": {
+				"type": "String"
+			},
+			"DocumentCount1": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Vimeo"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-13T17:12:24Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

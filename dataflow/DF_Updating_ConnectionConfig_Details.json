@@ -1,0 +1,151 @@
+{
+	"name": "DF_Updating_ConnectionConfig_Details",
+	"properties": {
+		"folder": {
+			"name": "ConnectionMgnt"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SF_DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SF_DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG",
+						"type": "DatasetReference"
+					},
+					"name": "sink1",
+					"rejectedDataLinkedService": {
+						"referenceName": "googlea",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "externalCallRefreshToken",
+					"linkedService": {
+						"referenceName": "Refresh_Rest_API_Connection",
+						"type": "LinkedServiceReference"
+					}
+				},
+				{
+					"name": "ConnectionDetailsParsing"
+				},
+				{
+					"name": "DecodeConnectionDetails"
+				},
+				{
+					"name": "RequestPayload"
+				},
+				{
+					"name": "ResponseParsing"
+				},
+				{
+					"name": "encodeResponse"
+				},
+				{
+					"name": "derivedColumn4"
+				},
+				{
+					"name": "AlterRow1"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     dataSourceId as string",
+				"}",
+				"source(output(",
+				"          DATASOURCE_ID as string,",
+				"          DATASOURCE_NAME as string,",
+				"          CONNECTION_CONFIG as string,",
+				"          ORGANIZATION_ID as string,",
+				"          STATUS as string,",
+				"          EXECUTION_DATE as timestamp,",
+				"          STATUS_LOG as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     query: (\"SELECT * FROM AZURE.PUBLIC.DELL_BOOMI_DATA_SOURCE_CONNECTION_CONFIG where DATASOURCE_ID='{$dataSourceId}'\"),",
+				"     format: 'query') ~> source1",
+				"RequestPayload call(mapColumn(",
+				"          GA = requestBody",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     output(",
+				"          headers as [string,string],",
+				"          responseBody as string,",
+				"          status as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     format: 'rest',",
+				"     store: 'restservice',",
+				"     timeout: 30,",
+				"     requestInterval: 0,",
+				"     httpMethod: 'POST',",
+				"     headerColumnName: 'headers',",
+				"     bodyColumnName: 'responseBody',",
+				"     statusColumnName: 'status',",
+				"     addResponseCode: true,",
+				"     httpCompressionType: 'gzip') ~> externalCallRefreshToken",
+				"DecodeConnectionDetails parse(connectionConfigJson = decodeConnectionConfigDetails ? (Connection_Config as (access_token as string,",
+				"     expires_in as integer,",
+				"     refresh_token as string,",
+				"     scope as string,",
+				"     token_type as string,",
+				"     clientID as string,",
+				"     clientSecret as string),",
+				"     Cust_Profile as (organizationID as string,",
+				"     boomiTenantId as string))[],",
+				"     format: 'json',",
+				"     documentForm: 'documentPerLine') ~> ConnectionDetailsParsing",
+				"source1 derive(decodeConnectionConfigDetails = fromBase64(CONNECTION_CONFIG)) ~> DecodeConnectionDetails",
+				"ConnectionDetailsParsing derive(requestBody = concat('{\"grant_type\":\"refresh_token\",\"refresh_token\":\"',connectionConfigJson[1].Connection_Config.refresh_token,'\",\"client_id\":\"',connectionConfigJson[1].Connection_Config.clientID,'\",\"client_secret\":\"',connectionConfigJson[1].Connection_Config.clientSecret,'\"}'),",
+				"          tokenData := toString(connectionConfigJson.Connection_Config.clientSecret)) ~> RequestPayload",
+				"externalCallRefreshToken parse(parseResponseBody = responseBody ? (access_token as string,\r",
+				"     expires_in as integer,\r",
+				"     scope as string,\r",
+				"     token_type as string)[],",
+				"     format: 'json',",
+				"     documentForm: 'singleDocument') ~> ResponseParsing",
+				"ResponseParsing derive(finalConnectionData = concat('{\"Connection_Config\" :{\"access_token\":\"',parseResponseBody[1].access_token,'\",\"expires_in\":3599,\"refresh_token\":\"',connectionConfigJson[1].Connection_Config.refresh_token,'\",\"scope\":\"',parseResponseBody[1].scope,'\",\"token_type\":\"',parseResponseBody[1].token_type,'\",\"clientID\":\"',connectionConfigJson[1].Connection_Config.clientID,'\",\"clientSecret\":\"',connectionConfigJson[1].Connection_Config.clientSecret,'\"},\"Cust_Profile\":{\"organizationID\":\"',connectionConfigJson[1].Cust_Profile.organizationID,'\",\"boomiTenantId\":\"',connectionConfigJson[1].Cust_Profile.boomiTenantId,'\"}}')) ~> encodeResponse",
+				"encodeResponse derive(encodeConnectionData = toBase64(finalConnectionData),",
+				"          executedTime = currentTimestamp()) ~> derivedColumn4",
+				"derivedColumn4 alterRow(updateIf(true())) ~> AlterRow1",
+				"AlterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DATASOURCE_ID as string,",
+				"          DATASOURCE_NAME as string,",
+				"          CONNECTION_CONFIG as string,",
+				"          ORGANIZATION_ID as string,",
+				"          STATUS as string,",
+				"          EXECUTION_DATE as timestamp,",
+				"          STATUS_LOG as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['DATASOURCE_ID'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DATASOURCE_ID,",
+				"          CONNECTION_CONFIG = encodeConnectionData,",
+				"          EXECUTION_DATE = executedTime",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

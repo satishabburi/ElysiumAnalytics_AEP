@@ -1,0 +1,560 @@
+{
+	"name": "GA-CampaignStats",
+	"properties": {
+		"activities": [
+			{
+				"name": "Fetching data from GA Rest API and save into AB",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Execute DataFeed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"additionalHeaders": {
+							"Authorization": {
+								"value": "@concat(pipeline().parameters.tokenType,' ', pipeline().parameters.accessToken)",
+								"type": "Expression"
+							}
+						},
+						"paginationRules": {
+							"QueryParameters.{offset}": "RANGE:1:1000:200"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "REST_GA_CampaignStats",
+						"type": "DatasetReference",
+						"parameters": {
+							"startDate": {
+								"value": "@pipeline().parameters.loadTs",
+								"type": "Expression"
+							},
+							"endDate": {
+								"value": "@utcnow('yyyy-MM-dd')",
+								"type": "Expression"
+							},
+							"max": "200",
+							"orgId": {
+								"value": "@pipeline().parameters.orgId",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "GA_Pipeline_AzureBlob",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Execute Errorhand",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Calling DF-Error",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Global Alert Notification Framework",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"parentPipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"errorMessage": {
+							"value": "@string(replace(activity('Fetching data from GA Rest API and save into AB').error.message, '\"',''''))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set payloadSize",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fetching data from GA Rest API and save into AB",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "PayloadSize1",
+					"value": {
+						"value": "@string(activity('Fetching data from GA Rest API and save into AB').output.dataWritten)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set docCount",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set payloadSize",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "DocumentCount1",
+					"value": {
+						"value": "@string(activity('Fetching data from GA Rest API and save into AB').output.rowsCopied)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute DataFeed",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "Campaigns Stats",
+						"SubFunction": "Get Dimensions and Metrics of CampaignStats",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Inprogress",
+						"documentCount": 0
+					}
+				}
+			},
+			{
+				"name": "Calling DF-Error",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Fetching data from GA Rest API and save into AB",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"Function": "Campaigns Stats",
+						"SubFunction": "Get Dimensions and Metrics of CampaignStats",
+						"DataSource": {
+							"value": "@pipeline().parameters.dataSource",
+							"type": "Expression"
+						},
+						"feedexicution_Date": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"extraction_period_from": {
+							"value": "@pipeline().parameters.loadTs",
+							"type": "Expression"
+						},
+						"extraction_period_thru": {
+							"value": "@pipeline().parameters.currentTime",
+							"type": "Expression"
+						},
+						"payloadSize": 0,
+						"runId": {
+							"value": "@pipeline().parameters.runId",
+							"type": "Expression"
+						},
+						"feedStatus": "Error",
+						"documentCount": 1,
+						"iobExecutionLog": "Not able to fetch the data from GA Rest API"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set docCount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(greater(int(variables('DocumentCount1')), 0), greater(int(variables('PayloadSize1')), 38))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Calling DF-NOData",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Campaigns Stats",
+									"SubFunction": "Get Dimensions and Metrics of CampaignStats",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": 0,
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "NoData",
+									"documentCount": 1
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Calling DF-Inprogress",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Campaigns Stats",
+									"SubFunction": "Get Dimensions and Metrics of CampaignStats",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Inprogress",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Injecting data into Snowflake",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-Inprogress",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "GA-CampaignStats-DATAFEED",
+									"type": "DataFlowReference",
+									"parameters": {
+										"dateFormating": "replace(replace(replace(replace(rows.c[1].v,\"Date(\",\"\"),\")\",\"\"),\",\",\"\"),\" \",\"-\")",
+										"runId": {
+											"value": "'@{pipeline().RunId}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 16,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "Calling DF-SF-Error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Injecting data into Snowflake",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Campaigns Stats",
+									"SubFunction": "Get Dimensions and Metrics of CampaignStats",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@variables('PayloadSize1')",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Error",
+									"documentCount": {
+										"value": "@variables('DocumentCount1')",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Not able to Ingested data to EA SNOWFLAKE"
+								}
+							}
+						},
+						{
+							"name": "Execute ErrorHandling for SF error",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Calling DF-SF-Error",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Global Alert Notification Framework",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"parentPipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"errorMessage": {
+										"value": "@string(replace(activity('Injecting data into Snowflake').error.message, '\"',''''))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Execute DataFeed_Success",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Injecting data into Snowflake",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DATA_FEED_STATS_TABLE_UPDATE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"Function": "Campaigns Stats",
+									"SubFunction": "Get Dimensions and Metrics of CampaignStats",
+									"DataSource": {
+										"value": "@pipeline().parameters.dataSource",
+										"type": "Expression"
+									},
+									"feedexicution_Date": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"extraction_period_from": {
+										"value": "@pipeline().parameters.loadTs",
+										"type": "Expression"
+									},
+									"extraction_period_thru": {
+										"value": "@pipeline().parameters.currentTime",
+										"type": "Expression"
+									},
+									"payloadSize": {
+										"value": "@int(variables('PayloadSize1'))",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@pipeline().parameters.runId",
+										"type": "Expression"
+									},
+									"feedStatus": "Success",
+									"documentCount": {
+										"value": "@int(variables('DocumentCount1'))",
+										"type": "Expression"
+									},
+									"iobExecutionLog": "Data is Ingested to EA SNOWFLAKE Successfully ​"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"loadTs": {
+				"type": "string"
+			},
+			"dataSource": {
+				"type": "string"
+			},
+			"currentTime": {
+				"type": "string"
+			},
+			"runId": {
+				"type": "string"
+			},
+			"accessToken": {
+				"type": "string"
+			},
+			"tokenType": {
+				"type": "string"
+			},
+			"orgId": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"PayloadSize1": {
+				"type": "String"
+			},
+			"DocumentCount1": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "GoogleAnalytics"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-04-06T16:21:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

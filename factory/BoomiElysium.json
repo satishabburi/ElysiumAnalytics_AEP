@@ -1,0 +1,9 @@
+{
+	"name": "BoomiElysium",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "344f85fc-7757-4eb5-8218-3b9ea317bfd6",
+		"tenantId": "ada79fc3-524b-4499-b38d-a5fb2ada3a2e"
+	}
+}
